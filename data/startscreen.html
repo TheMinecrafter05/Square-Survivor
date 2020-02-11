@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html>
+    <style>
+    .ueberschrift{
+        font-size: 200%;
+        font-family: "Railway to Hells";
+        position: absolute;
+        width: 500px;
+        height: 150px;
+        color: red;
+        top: 5%;
+        left: calc(50% - 200px)
+    }
+
+.StartButton:hover{
+    background-color: green;
+    cursor: pointer;
+}
+    .StartButton{
+        background-color: rgb(10, 80, 10);
+        position: absolute;
+        width: 100px;
+        height: 100px;
+        left: calc(50% - 50px);
+        top: calc(50% - 50px)
+    }
+    </style>
+
+    <script>
+        var music = new Audio()
+        music.src ="./title-music.mp3"
+        music.volume = 0.5
+        setInterval(()=>{
+            music.play()
+        },1000) 
+        let oben = 0
+        let links = 0
+
+        let number = 0.1
+        let number1 = 0.1
+        let speed = 1
+        setInterval(function(){
+            links+=number1
+            oben+=number
+            let Square = document.getElementById("Square")
+            Square.style.left = links+"%"
+            Square.style.top = oben+"%"
+
+            if(Square.style.top > "90%"){
+               number = -number
+               Square.style.top = "90%"
+            }
+            if(Square.style.top < "0%"){
+               number = -number
+               Square.style.top = "0%"
+            }
+
+            if(Square.style.left > "95%"){
+               number1 = -number1
+               Square.style.left = "95%"
+            }
+
+            if(Square.style.left < "0%"){
+                number1 = -number1
+                Square.style.left = "0%"
+            }
+        }, speed)
+    </script>
+    <body style="overflow: hidden; background-image: url(./startscreenbackground.jpg);">
+        <p class="ueberschrift">Square Survivor</p>
+        <a href="./index.html"><button class="StartButton">START</button></a>
+        <div id="Square" style="position: absolute; width: 100px; height: 100px; background-color: yellow;"></div>
+    </body>
+</html>

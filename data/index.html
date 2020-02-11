@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+	<meta charset="UTF-8">
+	<meta name="viewport" content="width=device-width">
+	<meta http-equiv="X-UA-Compatible" content="ie=edge">
+	<title>Square Survivor</title>
+
+	<style>
+		* { margin: 0; overflow: hidden; padding: 0; }
+
+		html { width: 100%; height: 100%; }
+
+		body { background-color: black; display: grid; width: 100%; height: 100%; }
+
+		canvas { align-self: center; justify-self: center; margin: 0;}
+
+		canvas:hover{
+			cursor:cell;
+		}
+	</style>
+
+</head>
+<body>
+<canvas id="canvas"></canvas>
+
+<button id="button" style="background-color: green; position: absolute; left: 200%; top: calc(60% - 50px); width: 100px; height: 100px;" onclick="respawn()">TRY AGAIN</button>
+
+<script>
+
+	var music = new Audio("./CaveBeat.mp3")
+	music.volume = 0.3
+
+	var PreviusFrameTime = 0;
+
+	var kills = 0;
+
+	let number = 0;
+
+	var regenerating = false
+
+	var boss1 = false
+	var boss2 = false
+	var boss3 = false
+	var boss4 = false
+	var boss5 = false
+
+	let god = false
+
+	var Bullets = [];
+
+	var Enemys = [];
+
+	var bosss = [];
+
+
+	var shields = [];
+
+	var heals = [];
+
+	var strengths = [];
+
+	var shield = false
+
+	var level = 1;
+
+const player = {
+		"width" : 100,
+		"height" : 120,
+		"gravity" : 10,
+		"positionX" : 500,
+		"positionY" : 10,
+		"hearts" : 100,
+		"damage" : 30,
+		"speed" : 5,
+		"jump" : false,
+		"jumpgravity" : -40,
+		"imageleft" : "./Playerleft.png",
+		"imageright" : "./Playerright.png",
+		"actualImage": "./Playerright.png"
+	}
+
+var gravity = player.gravity
+
+
+let interval = null
+
+let shooting = false
+
+var bossfight = false
+
+function respawn(){
+		location.reload()
+	}
+
+var playernowimage = Image(player.width, player.height)
+	playernowimage.src = player.imageleft
+
+
+	var background = new Image(100, 100, 100,100)
+		background.src="./Background.png"
+
+		var healImage = new Image(50,50)
+		healImage.src ="./Heal.png"
+
+		var shieldImage = new Image(50,50)
+		shieldImage.src ="./Shield.png"
+
+		var strengthImage = new Image(50,50)
+		strengthImage.src ="./Strength.png"
+
+	var ctx = document.querySelector("canvas").getContext("2d")
+
+	var width = document.documentElement.clientWidth;
+	var height = document.documentElement.clientHeight;
+
+function Bullet(x, y, width, height, speed){
+	this.x = x
+	this.y = y
+	this.width = width
+	this.height = height
+	this.speed = speed
+
+	this.bulletUpdate = function(){
+		this.bulletDraw()
+		this.bulletMove()
+		this.bulletCollide()
+	}
+
+	this.bulletMove = function(){
+		this.x += this.speed
+	}
+
+	this.bulletDraw = function(){
+		ctx.fillStyle = "black"
+		ctx.fillRect(this.x, this.y, this.width, this.height)
+	}
+
+	this.bulletCollide = function(){
+		for(i=0;i<Bullets.length;i++){
+			let bullet = Bullets[i];
+			if(bullet.x > ctx.canvas.width || bullet.x < 0){
+				Bullets.splice(i, 1)
+			}
+		}
+	}
+}
+
+function Enemy(x, y, width, height, speed, damage, hearts){
+	this.x = x
+	this.y = y
+	this.width = width
+	this.height = height
+	this.speed = speed
+	this.damage = damage
+	this.hearts = hearts
+
+	this.enemyUpdate = function(){
+		this.enemyCollide()
+		this.enemyMove()
+		this.enemyDraw()
+	}
+
+	this.enemyMove = function(){
+		this.x += this.speed
+		this.y += 10
+	}
+
+	this.enemyDraw = function(){
+		ctx.fillStyle = "rgb(100,100,100)"
+		ctx.fillRect(this.x, this.y, this.width, this.height)
+	}
+
+	this.enemyCollide = function(){
+		if(this.x >= ctx.canvas.width - this.width || this.x <= 0){
+			this.speed = -this.speed
+		}
+
+		if(this.y > document.documentElement.clientHeight - 400 + this.height){
+					this.y -= 10
+		}
+
+		if(player.positionX > this.x - 100 && player.positionX < this.x + 100 && player.positionY + player.height > this.y){
+					if(god == false){
+						god = true
+						player.hearts -= this.damage
+
+						var damage = new Audio("./damage.mp3")
+						damage.volume = 0.5
+						damage.playbackRate = 0.5
+						damage.play()
+						setTimeout(()=>{
+							god = false
+						},3000)
+					}
+
+				}
+	}
+}
+
+function Boss(x,y, width, height, speed, damage, hearts){
+	this.x = x
+	this.y = y
+	this.width = width
+	this.height = height
+	this.speed = speed
+	this.damage = damage
+	this.hearts = hearts
+
+	this.bossUpdate = function(){
+		this.bossCollide()
+		this.bossMove()
+		this.bossDraw()
+	}
+
+	this.bossMove = function(){
+		this.x += this.speed
+		this.y += 10
+	}
+
+	this.bossDraw = function(){
+		ctx.fillStyle = "red"
+		ctx.fillRect(this.x, this.y, this.width, this.height)
+	}
+
+	this.bossCollide = function(){
+		if(this.x >= ctx.canvas.width - this.width || this.x <= 0){
+			this.speed = -this.speed
+		}
+
+		if(this.y > document.documentElement.clientHeight - 400){
+					this.y -= 10
+		}
+
+		if(player.positionX > this.x - 90 && player.positionX < this.x + 200 && player.positionY + player.height > this.y){
+					if(god == false){
+						god = true
+						player.hearts -= this.damage
+
+						var damage = new Audio("./damage.mp3")
+						damage.volume = 0.5
+						damage.playbackRate = 0.5
+						damage.play()
+						setTimeout(()=>{
+							god = false
+						},3000)
+					}
+
+				}
+	}
+}
+
+function shieldUpgrade(x, y){
+	this.x = x
+	this.y = y
+
+	this.shieldUpdate = function(){
+		this.shieldCollide()
+		this.shieldMove()
+		this.shieldDraw()
+	}
+
+	this.shieldMove = function(){
+		this.y += 5
+	}
+
+	this.shieldDraw = function(){
+		ctx.drawImage(shieldImage,this.x, this.y, 50, 50)
+	}
+
+	this.shieldCollide = function(){
+
+		if(this.y > document.documentElement.clientHeight - 200 - 30){
+			this.y -= 5
+		}
+	}
+}
+
+function strengthUpgrade(x,y){
+	this.x = x
+	this.y = y
+
+	this.strengthUpdate = function(){
+		this.strengthCollide()
+		this.strengthMove()
+		this.strengthDraw()
+	}
+
+	this.strengthMove = function(){
+		this.y += 5
+	}
+
+	this.strengthDraw = function(){
+		ctx.drawImage(strengthImage, this.x, this.y, 50, 50)
+	}
+
+	this.strengthCollide = function(){
+
+		if(this.y > document.documentElement.clientHeight - 200 - 30){
+			this.y -= 5
+		}
+	}
+
+
+}
+
+function healUpgrade(x,y){
+	this.x = x
+	this.y = y
+
+	this.healUpdate = function(){
+		this.healCollide()
+		this.healMove()
+		this.healDraw()
+	}
+
+	this.healMove = function(){
+		this.y += 5
+	}
+
+	this.healDraw = function(){
+
+		ctx.drawImage(healImage, this.x, this.y, 50, 50)
+	}
+
+	this.healCollide = function(){
+
+		if(this.y > document.documentElement.clientHeight - 200 - 30){
+			this.y -= 5
+		}
+	}
+}
+
+
+	function Input(){
+    self = this;
+
+    self.isLeftPressed = false;
+    self.isRightPressed = false;
+    self.isUpPressed = false;
+	self.isShiftPressed = false;
+	self.isShootPressed = false;
+	self.isPausePressed = false;
+
+    function handleKeyEvent(e, isKeyDown){
+        if(e.keyCode == 65){
+            self.isLeftPressed = isKeyDown;
+        }
+        if(e.keyCode == 68){
+            self.isRightPressed = isKeyDown;
+        }
+        if(e.keyCode == 32){
+            self.isUpPressed = isKeyDown;
+        }
+		if(e.keyCode == 16){
+            self.isShiftPressed = isKeyDown;
+		}
+		if(e.keyCode == 81){
+            self.isShootPressed = isKeyDown;
+        }
+
+		if(e.keyCode == 27){
+            self.isPausePressed = isKeyDown;
+        }
+
+    }
+    document.addEventListener("keydown", function(e){handleKeyEvent(e, true)});
+    document.addEventListener("keyup", function(e){handleKeyEvent(e, false)});
+}
+
+function regenerate(){
+	var regeneration;
+
+	if(player.hearts <= 100 && shield == true){ shield = false }
+
+	if(player.hearts > 100 && shield == false){
+		player.hearts = 100
+	}
+
+	if(player.hearts < 100 && regenerating == false){
+		regenerating = true
+		regeneration = setInterval(()=>{
+			if(player.hearts < 10){
+				player.hearts+=2
+				return;
+			}
+			
+			player.hearts += Math.floor(player.hearts/5)
+
+			if(player.hearts > 99){
+				clearInterval(regeneration)
+				regenerating = false
+			}
+		},3000)
+	}
+}
+
+const input = new Input()
+
+
+	function loop(time){
+
+			var FPS = Math.floor(1000/(time - PreviusFrameTime))
+
+			PreviusFrameTime = time
+
+		if(player.hearts <= 0){
+			ctx.font = "30px Times New Roman"
+			ctx.textAlign = "center"
+			ctx.fillText("GAME OVER", ctx.canvas.width/2 - 20, ctx.canvas.height/2)
+			document.getElementById("button").style.left = "calc(50% - 50px)"
+			return;
+		}
+
+		if(kills >= 150){
+			ctx.font = "30px Times New Roman"
+			ctx.textAlign = "center"
+			ctx.fillText("YOU WON", ctx.canvas.width/2 - 20, ctx.canvas.height/2)
+			document.getElementById("button").style.left = "calc(50% - 50px)"
+			return;
+		}
+
+		music.play()
+
+		var random = Math.floor(Math.random() * 500)
+
+		if(random == 1){
+
+			if(kills > 59){
+				if(level < 5){
+					level++
+				}
+			var enemy = new Enemy(1, document.documentElement.clientHeight - 400, 100, 120, 10, 50, 140)
+			Enemys.push(enemy)
+			}
+
+			if(kills > 44 && kills < 60){
+				if(level < 4){
+					level++
+				}
+			var enemy = new Enemy(1, document.documentElement.clientHeight - 400, 100, 120, 9, 45, 120)
+			Enemys.push(enemy)
+			}
+
+			if(kills > 29 && kills < 45){
+				if(level < 3){
+					level++
+				}
+			var enemy = new Enemy(1, document.documentElement.clientHeight - 400, 100, 120, 8, 40, 90)
+			Enemys.push(enemy)
+			}
+			if(kills > 14 && kills < 29){
+				if(level < 2){
+					level++
+				}
+			var enemy = new Enemy(1, document.documentElement.clientHeight - 400, 100, 120, 7, 35, 70)
+			Enemys.push(enemy)
+			}
+			if(kills < 15){
+			var enemy = new Enemy(1, document.documentElement.clientHeight - 400, 100, 120, 6, 30, 50)
+			Enemys.push(enemy)
+			}
+
+
+
+			if(kills > 24 && boss1 == false){
+				boss1 = true
+				var boss = new Boss(1, document.documentElement.clientHeight - 600, 200, 220, 4, 50, 250)
+				bosss.push(boss)
+			}
+
+			if(kills > 49 && boss2 == false){
+				boss2 = true
+				var boss = new Boss(1, document.documentElement.clientHeight - 600, 200, 220, 4.5, 60, 350)
+				bosss.push(boss)
+			}
+
+			if(kills > 74 && boss3 == false){
+				boss3 = true
+				var boss = new Boss(1, document.documentElement.clientHeight - 600, 200, 220, 5, 70, 450)
+				bosss.push(boss)
+			}
+
+			if(kills > 99 && boss4 == false){
+				boss4 = true
+				var boss = new Boss(1, document.documentElement.clientHeight - 600, 200, 220, 5.5, 80, 550)
+				bosss.push(boss)
+			}
+
+			if(kills > 124 && boss5 == false){
+				boss5 = true
+				var boss = new Boss(1, document.documentElement.clientHeight - 600, 200, 220, 6, 90, 650)
+				bosss.push(boss)
+			}
+		}
+
+		if(random == 2){
+
+			if(kills > 59){
+				if(level < 5){
+					level++
+				}
+			var enemy = new Enemy(ctx.canvas.width - 100, document.documentElement.clientHeight - 400, 100, 120, 10, 50, 140)
+			Enemys.push(enemy)
+			}
+
+			if(kills > 44 && kills < 60){
+				if(level < 4){
+					level++
+				}
+			var enemy = new Enemy(ctx.canvas.width - 100, document.documentElement.clientHeight - 400, 100, 120, 9, 45, 120)
+			Enemys.push(enemy)
+			}
+			if(kills > 29 && kills < 45){
+				if(level < 3){
+					level++
+				}
+			var enemy = new Enemy(ctx.canvas.width - 100, document.documentElement.clientHeight - 400, 100, 120, 8, 40, 90)
+			Enemys.push(enemy)
+			}
+			if(kills > 14 && kills < 30){
+				if(level < 2){
+					level++
+				}
+			var enemy = new Enemy(ctx.canvas.width - 100, document.documentElement.clientHeight - 400, 100, 120, 7, 35, 70)
+			Enemys.push(enemy)
+			}
+			if(kills < 15){
+			var enemy = new Enemy(ctx.canvas.width - 100, document.documentElement.clientHeight - 400, 100, 120, 6, 30, 50)
+			Enemys.push(enemy)
+			}
+
+
+
+			if(kills > 24 && boss1 == false){
+				boss1 = true
+				var boss = new Boss(ctx.canvas.width - 200, document.documentElement.clientHeight - 600, 200, 220, 4, 50, 250)
+				bosss.push(boss)
+			}
+
+			if(kills > 49 && boss2 == false){
+				boss2 = true
+				var boss = new Boss(ctx.canvas.width - 200, document.documentElement.clientHeight - 600, 200, 220, 4.5, 60, 350)
+				bosss.push(boss)
+			}
+
+			if(kills > 74 && boss3 == false){
+				boss3 = true
+				var boss = new Boss(ctx.canvas.width - 200, document.documentElement.clientHeight - 600, 200, 220, 5, 70, 450)
+				bosss.push(boss)
+			}
+
+			if(kills > 99 && boss4 == false){
+				boss4 = true
+				var boss = new Boss(ctx.canvas.width - 200, document.documentElement.clientHeight - 600, 200, 220, 5.5, 80, 550)
+				bosss.push(boss)
+			}
+
+			if(kills > 124 && boss5 == false){
+				boss5 = true
+				var boss = new Boss(ctx.canvas.width - 200, document.documentElement.clientHeight - 600, 200, 220, 6, 90, 650)
+				bosss.push(boss)
+			}
+		}
+
+		width = document.documentElement.clientWidth -16;
+		height = document.documentElement.clientHeight -16;
+
+		ctx.canvas.width = width -16;
+		ctx.canvas.height = height - 16;
+
+		if(input.isUpPressed){
+			if(player.jump == false){
+			player.jump = true
+			gravity = player.jumpgravity
+			var jumpsound = new Audio("./jump.mp3")
+				jumpsound.volume = 0.3
+				jumpsound.play()
+			setTimeout(()=>{
+				gravity = player.gravity
+			},150)
+			}
+		}
+
+		if(input.isLeftPressed && input.isShiftPressed){
+			player.positionX -= player.speed + 2
+			player.actualImage = "./Playerleft.png"
+			playernowimage = Image(player.width, player.height)
+			if(god == true){
+				playernowimage.src = "./PlayerLeftGod.png"
+			}else{
+			playernowimage.src = player.imageleft
+			}
+		}
+
+		if(input.isRightPressed && input.isShiftPressed){
+			player.actualImage = "./Playerright.png"
+			player.positionX += player.speed + 2
+			playernowimage = Image(player.width, player.height)
+			if(god == true){
+			playernowimage.src = "./PlayerRightGod.png"
+			}else{
+			playernowimage.src = player.imageright
+			}
+		}
+
+		if(input.isLeftPressed){
+			player.speed = 5
+			player.positionX -= player.speed
+			player.actualImage = "./Playerleft.png"
+			playernowimage = Image(player.width, player.height)
+			if(god == true){
+				playernowimage.src = "./PlayerLeftGod.png"
+			}else{
+			playernowimage.src = player.imageleft
+			}
+		}
+
+		if(input.isRightPressed){
+			player.speed = 5
+			player.positionX += player.speed
+			player.actualImage = "./Playerright.png"
+			playernowimage = Image(player.width, player.height)
+			if(god == true){
+			playernowimage.src = "./PlayerRightGod.png"
+			}else{
+			playernowimage.src = player.imageright
+			}
+		}
+
+		ctx.drawImage(background, 0,0)
+
+		ctx.drawImage(playernowimage, player.positionX, player.positionY, player.width, player.height)
+
+		if(Bullets.length > 0){
+			for(i=0; i<Bullets.length;i++){
+				Bullets[i].bulletUpdate()
+			}
+		}
+
+		if(Enemys.length > 0){
+			for(i=0; i<Enemys.length;i++){
+				Enemys[i].enemyUpdate()
+			}
+		}
+
+		if(bosss.length > 0){
+			for(i=0; i<bosss.length;i++){
+				ctx.font = "50px Times New Roman"
+				ctx.fillStyle = "red"
+				ctx.fillText(`BOSS FIGHT! Boss health: ${bosss[i].hearts}`, ctx.canvas.width/2 - 250, 100)
+				bosss[i].bossUpdate()
+			}
+		}
+
+		if(shields.length > 0){
+			for(i=0;i<shields.length;i++){
+				shields[i].shieldUpdate()
+			}
+		}
+
+		if(strengths.length > 0){
+			for(i=0;i<strengths.length;i++){
+				strengths[i].strengthUpdate()
+			}
+		}
+
+		if(heals.length > 0){
+			for(i=0;i<heals.length;i++){
+				heals[i].healUpdate()
+			}
+		}
+
+		ctx.fillStyle = "brown"
+		ctx.fillRect(0, height-400 +player.height*2, document.documentElement.clientWidth -16, 30)
+
+		player.positionY += gravity
+
+		if(player.positionY > height - 400 + player.height){
+			player.positionY = height - 400 + player.height
+			player.jump = false
+		}
+
+		if(player.positionX > width - player.width){
+			player.positionX = width - player.width
+		}
+
+		if(player.positionX < 0 ){
+			player.positionX = 0
+		}
+
+		ctx.font = "30px Times New Roman"
+		ctx.fillText(`FPS: ${FPS}`, 0, 50)
+
+		ctx.font = "30px Times New Roman"
+		ctx.fillText(`Kills: ${kills}`, ctx.canvas.width - 200, 50)
+
+		ctx.font = "30px Times New Roman"
+		ctx.fillText(`Time survived: ${number}s`, 0, 100)
+
+		ctx.font = "30px Times New Roman"
+		ctx.fillText(`Health: ${player.hearts}hp`, ctx.canvas.width - 200, 100)
+
+		ctx.font = "30px Times New Roman"
+		ctx.fillText(`Damage: ${player.damage}`, ctx.canvas.width - 200, 150)
+
+		ctx.font = "30px Times New Roman"
+		ctx.fillText(`Enemy level: ${level}`, 0, 150)
+
+		window.requestAnimationFrame(loop)
+	}
+
+	ctx.canvas.addEventListener("click", (Event) =>{
+		if(shooting == false){
+			shooting = true
+			let db = 0
+
+			var shot = new Audio("./shot.mp3")
+			shot.volume = 0.8
+			shot.play()
+
+			if(player.actualImage == "./Playerright.png"){ db = 1 }
+			if(player.actualImage == "./Playerleft.png"){ db = 2 }
+
+			if(db == 1 && db != 0){
+				var newBullet = new Bullet(player.positionX + player.width -2, player.positionY + 50, 10, 10, 50)
+				Bullets.push(newBullet)
+			}else{
+				var newBullet = new Bullet(player.positionX - player.width -2, player.positionY + 50, 10, 10, -50)
+				Bullets.push(newBullet)
+			}
+
+			setTimeout(()=>{
+				shooting = false
+			},200)
+		}
+		})
+
+		loop();
+
+		setInterval(()=>{
+			for(i=0;i<Bullets.length;i++){
+			for(o=0;o<Enemys.length;o++){
+				let bullet = Bullets[i]
+				let enemy = Enemys[o]
+					if(bullet.x > enemy.x && bullet.x < enemy.x + 100 && bullet.y > enemy.y){
+						Bullets.splice(i, 1)
+						enemy.hearts -= player.damage
+
+						var hit = new Audio("./hitmarker.mp3")
+						hit.play()
+					}
+
+					if(Enemys[o].hearts <= 0){
+						Enemys.splice(o,1)
+						kills++
+					}
+				}
+
+				if(bosss.length > 0){
+						for(b=0;b<bosss.length;b++){
+							let boss = bosss[b]
+							let bullet = Bullets[i]
+
+						if(bullet.x > boss.x && bullet.x < boss.x + 200 && bullet.y > boss.y){
+						Bullets.splice(b, 1)
+						boss.hearts -= player.damage
+
+						var hit = new Audio("./hitmarker.mp3")
+						hit.play()
+					}
+
+					if(bosss[b].hearts <= 0){
+						bosss.splice(b,1)
+						kills++
+						if(shield == false){
+							player.hearts = 100
+						}
+					}
+						}
+					}
+		}
+
+		for(i=0;i<shields.length;i++){
+			let shieldd = shields[i]
+			if(player.positionX > shieldd.x - 100 && player.positionX < shieldd.x + 50 && player.positionY + player.height > shieldd.y && player.positionY < shieldd.y + 50){
+				if(player.hearts < 100) return;
+
+				shield = true
+				player.hearts += 25
+				shields.splice(i,1)
+				var pop = new Audio("./pop.mp3")
+					pop.play()
+			}
+		}
+
+		for(i=0;i<strengths.length;i++){
+			let strengthh = strengths[i]
+			if(player.positionX > strengthh.x - 100 && player.positionX < strengthh.x + 50 && player.positionY + player.height > strengthh.y && player.positionY < strengthh.y + 50){
+
+				player.damage += 2
+				strengths.splice(i,1)
+				var pop = new Audio("./pop.mp3")
+					pop.play()
+			}
+		}
+
+		for(i=0;i<heals.length;i++){
+			let healss = heals[i]
+			if(player.positionX > healss.x - 100 && player.positionX < healss.x + 50 && player.positionY + player.height > healss.y && player.positionY < healss.y + 50){
+				if(player.hearts >= 100 || shield == true){
+					player.hearts += 0
+				}else{
+					player.hearts += 25
+				}
+				heals.splice(i,1)
+				var pop = new Audio("./pop.mp3")
+					pop.play()
+			}
+		}
+		regenerate()
+		})
+
+		setInterval(()=>{
+			number++
+
+			var upgradeRandom = Math.floor(Math.random() * 50)
+
+			if(upgradeRandom == 3){
+			var shieldding = new shieldUpgrade(Math.floor(Math.random() * ctx.canvas.width - 150) + 150,0)
+			shields.push(shieldding)
+		}
+
+		if(upgradeRandom == 4){
+			var strengthding = new strengthUpgrade(Math.floor(Math.random() * ctx.canvas.width - 150) + 150,0)
+			strengths.push(strengthding)
+		}
+
+		if(upgradeRandom == 5){
+			var healding = new healUpgrade(Math.floor(Math.random() * ctx.canvas.width - 150),0)
+			heals.push(healding)
+		}
+		},1000)
+</script>
+
+</body>
+</html>
