@@ -6,8 +6,4 @@
 |Datei. Ignoriere die Warnung, |
 |die kommt nur, weil es eine   |
 |unbekannte .exe Datei ist.    |
-|----------WARNUNG-------------|
-|Das Spiel speichert noch kein |
-|Fortschritt, da ich es erst   |
-|halbwegs fertig bekommen will.|
 |------------------------------|
